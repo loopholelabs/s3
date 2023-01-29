@@ -29,6 +29,7 @@ import (
 type Options struct {
 	LogName   string
 	Endpoint  string
+	Secure    bool
 	Region    string
 	Prefix    string
 	AccessKey string
@@ -55,7 +56,7 @@ func New(options *Options, logger *zerolog.Logger) (*Client, error) {
 
 	client, err := minio.New(options.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(options.AccessKey, options.SecretKey, ""),
-		Secure: true,
+		Secure: options.Secure,
 		Region: options.Region,
 	})
 	if err != nil {

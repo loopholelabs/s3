@@ -31,11 +31,13 @@ var (
 )
 
 const (
+	DefaultSecure = true
 	DefaultRegion = "auto"
 )
 
 type Config struct {
 	Endpoint  string `yaml:"endpoint"`
+	Secure    bool   `yaml:"secure"`
 	Region    string `yaml:"region"`
 	Prefix    string `yaml:"prefix"`
 	AccessKey string `yaml:"access_key"`
@@ -44,6 +46,7 @@ type Config struct {
 
 func New() *Config {
 	return &Config{
+		Secure: DefaultSecure,
 		Region: DefaultRegion,
 	}
 }
@@ -70,6 +73,7 @@ func (c *Config) Validate() error {
 
 func (c *Config) RootPersistentFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&c.Endpoint, "s3-endpoint", "", "The s3 endpoint")
+	flags.BoolVar(&c.Secure, "s3-secure", DefaultSecure, "The s3 secure flag")
 	flags.StringVar(&c.Region, "s3-region", DefaultRegion, "The s3 region")
 	flags.StringVar(&c.Prefix, "s3-prefix", "", "The s3 bucket prefix")
 	flags.StringVar(&c.AccessKey, "s3-access-key", "", "The s3 access key")
@@ -98,6 +102,7 @@ func (c *Config) GlobalRequiredFlags(cmd *cobra.Command) error {
 func (c *Config) GenerateOptions(logName string) *s3.Options {
 	return &s3.Options{
 		LogName:   logName,
+		Secure:    c.Secure,
 		Region:    c.Region,
 		Endpoint:  c.Endpoint,
 		Prefix:    c.Prefix,
