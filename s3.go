@@ -40,6 +40,7 @@ type Client struct {
 	logger     *zerolog.Logger
 	options    *Options
 	client     *minio.Client
+	makeOpts   minio.MakeBucketOptions
 	getOpts    minio.GetObjectOptions
 	putOpts    minio.PutObjectOptions
 	removeOpts minio.RemoveObjectOptions
@@ -64,10 +65,11 @@ func New(options *Options, logger *zerolog.Logger) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	e := &Client{
-		logger:  &l,
-		options: options,
-		client:  client,
-		getOpts: minio.GetObjectOptions{},
+		logger:   &l,
+		options:  options,
+		client:   client,
+		makeOpts: minio.MakeBucketOptions{},
+		getOpts:  minio.GetObjectOptions{},
 		putOpts: minio.PutObjectOptions{
 			ContentType: "application/octet-stream",
 		},
@@ -77,6 +79,11 @@ func New(options *Options, logger *zerolog.Logger) (*Client, error) {
 	}
 
 	return e, nil
+}
+
+func (e *Client) MakeBucket(ctx context.Context, bucket string) error {
+	e.logger.Debug().Msgf("making bucket '%s' (prefix '%s')", bucket, e.options.Prefix)
+	return e.client.MakeBucket(ctx, e.options.Prefix+bucket, e.makeOpts)
 }
 
 func (e *Client) GetObject(ctx context.Context, bucket string, key string) (io.ReadCloser, error) {
