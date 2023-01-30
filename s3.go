@@ -23,7 +23,9 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/rs/zerolog"
 	"io"
+	"net/url"
 	"sync"
+	"time"
 )
 
 type Options struct {
@@ -80,6 +82,11 @@ func New(options *Options, logger *zerolog.Logger) (*Client, error) {
 	}
 
 	return e, nil
+}
+
+func (e *Client) PresignedGetObject(ctx context.Context, bucket string, key string, expires time.Duration) (*url.URL, error) {
+	e.logger.Debug().Msgf("presigning object '%s' from bucket '%s' (prefix '%s') with expiry %s", key, bucket, e.options.Prefix, expires)
+	return e.client.PresignedGetObject(ctx, e.options.Prefix+bucket, key, expires, nil)
 }
 
 func (e *Client) MakeBucket(ctx context.Context, bucket string) error {
