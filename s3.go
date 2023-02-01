@@ -19,13 +19,14 @@ package s3
 import (
 	"context"
 	"fmt"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/rs/zerolog"
 	"io"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/rs/zerolog"
 )
 
 type Options struct {
@@ -92,6 +93,11 @@ func (e *Client) PresignedGetObject(ctx context.Context, bucket string, key stri
 func (e *Client) MakeBucket(ctx context.Context, bucket string) error {
 	e.logger.Debug().Msgf("making bucket '%s' (prefix '%s')", bucket, e.options.Prefix)
 	return e.client.MakeBucket(ctx, e.options.Prefix+bucket, e.makeOpts)
+}
+
+func (e *Client) RemoveBucket(ctx context.Context, bucket string) error {
+	e.logger.Debug().Msgf("removing bucket '%s' (prefix '%s')", bucket, e.options.Prefix)
+	return e.client.RemoveBucket(ctx, e.options.Prefix+bucket)
 }
 
 func (e *Client) GetObject(ctx context.Context, bucket string, key string) (io.ReadCloser, error) {
