@@ -110,11 +110,10 @@ func (e *Client) PutObject(ctx context.Context, bucket string, key string, reade
 	return e.client.PutObject(ctx, e.options.Prefix+bucket, key, reader, objectSize, e.putOpts)
 }
 
-func (e *Client) ListObjects(ctx context.Context, bucket string, subprefix string) <-chan minio.ObjectInfo {
-	e.logger.Debug().Msgf("listing objects in bucket '%s' (prefix '%s') for subprefix %v", bucket, e.options.Prefix, subprefix)
-
-	return e.client.ListObjects(ctx, e.options.Prefix+bucket, minio.ListObjectsOptions{
-		Prefix: subprefix,
+func (e *Client) ListObjects(ctx context.Context, prefix string) <-chan minio.ObjectInfo {
+	e.logger.Debug().Msgf("listing objects with prefix '%s' in bucket '%s'", prefix, e.options.Bucket)
+	return e.client.ListObjects(ctx, e.options.Bucket, minio.ListObjectsOptions{
+		Prefix: prefixName(prefix, ""),
 	})
 }
 
