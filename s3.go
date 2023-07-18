@@ -115,7 +115,7 @@ func (e *Client) MakeBucket(ctx context.Context, bucket string) error {
 func (e *Client) ListObjects(ctx context.Context, prefix string) <-chan minio.ObjectInfo {
 	e.logger.Debug().Msgf("listing objects with prefix '%s' in bucket '%s'", prefix, e.options.Bucket)
 	return e.client.ListObjects(ctx, e.options.Bucket, minio.ListObjectsOptions{
-		Prefix: prefixName(prefix, ""),
+		Prefix: prefixedKey(prefix, ""),
 	})
 }
 
