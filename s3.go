@@ -1,18 +1,18 @@
 /*
-	Copyright 2023 Loophole Labs
-
-	Licensed under the Apache License, Version 2.0 (the "License");
-	you may not use this file except in compliance with the License.
-	You may obtain a copy of the License at
-
-		   http://www.apache.org/licenses/LICENSE-2.0
-
-	Unless required by applicable law or agreed to in writing, software
-	distributed under the License is distributed on an "AS IS" BASIS,
-	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	See the License for the specific language governing permissions and
-	limitations under the License.
-*/
+ * 	Copyright 2023 Loophole Labs
+ *
+ * 	Licensed under the Apache License, Version 2.0 (the "License");
+ * 	you may not use this file except in compliance with the License.
+ * 	You may obtain a copy of the License at
+ *
+ * 		   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * 	Unless required by applicable law or agreed to in writing, software
+ * 	distributed under the License is distributed on an "AS IS" BASIS,
+ * 	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * 	See the License for the specific language governing permissions and
+ * 	limitations under the License.
+ */
 
 package s3
 
@@ -33,7 +33,7 @@ type Options struct {
 	Endpoint  string
 	Secure    bool
 	Region    string
-	Prefix    string
+	Bucket    string
 	AccessKey string
 	SecretKey string
 }
@@ -45,7 +45,6 @@ type Client struct {
 	client     *minio.Client
 	makeOpts   minio.MakeBucketOptions
 	getOpts    minio.GetObjectOptions
-	putOpts    minio.PutObjectOptions
 	removeOpts minio.RemoveObjectOptions
 	context    context.Context
 	cancel     context.CancelFunc
@@ -54,7 +53,7 @@ type Client struct {
 
 func New(options *Options, logger *zerolog.Logger) (*Client, error) {
 	l := logger.With().Str(options.LogName, "S3").Logger()
-	l.Debug().Msgf("connecting to s3 endpoint %s with bucket prefix '%s'", options.Endpoint, options.Prefix)
+	l.Debug().Msgf("connecting to s3 endpoint %s with bucket '%s'", options.Endpoint, options.Bucket)
 
 	client, err := minio.New(options.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(options.AccessKey, options.SecretKey, ""),
@@ -68,14 +67,11 @@ func New(options *Options, logger *zerolog.Logger) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	e := &Client{
-		logger:   &l,
-		options:  options,
-		client:   client,
-		makeOpts: minio.MakeBucketOptions{},
-		getOpts:  minio.GetObjectOptions{},
-		putOpts: minio.PutObjectOptions{
-			ContentType: "application/octet-stream",
-		},
+		logger:     &l,
+		options:    options,
+		client:     client,
+		makeOpts:   minio.MakeBucketOptions{},
+		getOpts:    minio.GetObjectOptions{},
 		removeOpts: minio.RemoveObjectOptions{},
 		context:    ctx,
 		cancel:     cancel,
@@ -85,28 +81,34 @@ func New(options *Options, logger *zerolog.Logger) (*Client, error) {
 }
 
 func (e *Client) PresignedGetObject(ctx context.Context, bucket string, key string, expires time.Duration) (*url.URL, error) {
-	e.logger.Debug().Msgf("presigning object '%s' from bucket '%s' (prefix '%s') with expiry %s", key, bucket, e.options.Prefix, expires)
-	return e.client.PresignedGetObject(ctx, e.options.Prefix+bucket, key, expires, nil)
-}
-
-func (e *Client) MakeBucket(ctx context.Context, bucket string) error {
-	e.logger.Debug().Msgf("making bucket '%s' (prefix '%s')", bucket, e.options.Prefix)
-	return e.client.MakeBucket(ctx, e.options.Prefix+bucket, e.makeOpts)
+	objName := objectName(bucket, key)
+	e.logger.Debug().Msgf("presigning object '%s' from bucket '%s' with expiry %s", objName, e.options.Bucket, expires)
+	return e.client.PresignedGetObject(ctx, e.options.Bucket, objName, expires, nil)
 }
 
 func (e *Client) GetObject(ctx context.Context, bucket string, key string) (io.ReadCloser, error) {
-	e.logger.Debug().Msgf("getting object '%s' from bucket '%s' (prefix '%s')", key, bucket, e.options.Prefix)
-	return e.client.GetObject(ctx, e.options.Prefix+bucket, key, e.getOpts)
+	objName := objectName(bucket, key)
+	e.logger.Debug().Msgf("getting object '%s' from bucket '%s'", objName, e.options.Bucket)
+	return e.client.GetObject(ctx, e.options.Bucket, objName, e.getOpts)
 }
 
-func (e *Client) PutObject(ctx context.Context, bucket string, key string, reader io.Reader, objectSize int64) (minio.UploadInfo, error) {
-	e.logger.Debug().Msgf("putting object '%s' into bucket '%s' (prefix '%s')", key, bucket, e.options.Prefix)
-	return e.client.PutObject(ctx, e.options.Prefix+bucket, key, reader, objectSize, e.putOpts)
+func (e *Client) PutObject(ctx context.Context, bucket string, key string, reader io.Reader, objectSize int64, contentType string) (minio.UploadInfo, error) {
+	objName := objectName(bucket, key)
+	e.logger.Debug().Msgf("putting object '%s' into bucket '%s'", objName, e.options.Bucket)
+	return e.client.PutObject(ctx, e.options.Bucket, objName, reader, objectSize, minio.PutObjectOptions{
+		ContentType: contentType,
+	})
 }
 
 func (e *Client) DeleteObject(ctx context.Context, bucket string, key string) error {
-	e.logger.Debug().Msgf("deleting object '%s' from bucket '%s' (prefix '%s')", key, bucket, e.options.Prefix)
-	return e.client.RemoveObject(ctx, e.options.Prefix+bucket, key, e.removeOpts)
+	objName := objectName(bucket, key)
+	e.logger.Debug().Msgf("deleting object '%s' from bucket '%s'", objName, e.options.Bucket)
+	return e.client.RemoveObject(ctx, e.options.Bucket, objName, e.removeOpts)
+}
+
+func (e *Client) MakeBucket(ctx context.Context, bucket string) error {
+	e.logger.Debug().Msgf("making bucket '%s'", bucket)
+	return e.client.MakeBucket(ctx, bucket, e.makeOpts)
 }
 
 func (e *Client) Close() error {
@@ -114,4 +116,8 @@ func (e *Client) Close() error {
 	e.cancel()
 	defer e.wg.Wait()
 	return nil
+}
+
+func objectName(bucket string, key string) string {
+	return fmt.Sprintf("%s/%s", bucket, key)
 }
