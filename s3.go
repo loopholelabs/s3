@@ -87,11 +87,6 @@ func (e *Client) PresignedGetObject(ctx context.Context, bucket string, key stri
 	return e.client.PresignedGetObject(ctx, e.options.Bucket, objName, expires, nil)
 }
 
-func (e *Client) RemoveBucket(ctx context.Context, bucket string) error {
-	e.logger.Debug().Msgf("removing bucket '%s' (prefix '%s')", bucket, e.options.Prefix)
-	return e.client.RemoveBucket(ctx, e.options.Prefix+bucket)
-}
-
 func (e *Client) GetObject(ctx context.Context, bucket string, key string) (io.ReadCloser, error) {
 	objName := objectName(bucket, key)
 	e.logger.Debug().Msgf("getting object '%s' from bucket '%s'", objName, e.options.Bucket)
@@ -115,6 +110,11 @@ func (e *Client) DeleteObject(ctx context.Context, bucket string, key string) er
 func (e *Client) MakeBucket(ctx context.Context, bucket string) error {
 	e.logger.Debug().Msgf("making bucket '%s'", bucket)
 	return e.client.MakeBucket(ctx, bucket, e.makeOpts)
+}
+
+func (e *Client) RemoveBucket(ctx context.Context, bucket string) error {
+	e.logger.Debug().Msgf("removing bucket '%s'", bucket)
+	return e.client.RemoveBucket(ctx, bucket)
 }
 
 func (e *Client) Close() error {
