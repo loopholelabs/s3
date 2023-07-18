@@ -18,6 +18,7 @@ package s3
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -29,8 +30,13 @@ import (
 	"github.com/rs/zerolog"
 )
 
+var (
+	ErrDisabled = errors.New("s3 is disabled")
+)
+
 type Options struct {
 	LogName   string
+	Disabled  bool
 	Endpoint  string
 	Secure    bool
 	Region    string
@@ -41,19 +47,26 @@ type Options struct {
 
 // S3 is a wrapper for the s3 client
 type S3 struct {
-	logger     *zerolog.Logger
-	options    *Options
+	logger  *zerolog.Logger
+	options *Options
+
 	client     *minio.Client
 	makeOpts   minio.MakeBucketOptions
 	getOpts    minio.GetObjectOptions
 	removeOpts minio.RemoveObjectOptions
-	context    context.Context
-	cancel     context.CancelFunc
-	wg         sync.WaitGroup
+
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 func New(options *Options, logger *zerolog.Logger) (*S3, error) {
 	l := logger.With().Str(options.LogName, "S3").Logger()
+	if options.Disabled {
+		l.Warn().Msg("disabled")
+		return nil, ErrDisabled
+	}
+
 	l.Debug().Msgf("connecting to s3 endpoint %s with bucket '%s'", options.Endpoint, options.Bucket)
 
 	client, err := minio.New(options.Endpoint, &minio.Options{
@@ -74,7 +87,7 @@ func New(options *Options, logger *zerolog.Logger) (*S3, error) {
 		makeOpts:   minio.MakeBucketOptions{},
 		getOpts:    minio.GetObjectOptions{},
 		removeOpts: minio.RemoveObjectOptions{},
-		context:    ctx,
+		ctx:        ctx,
 		cancel:     cancel,
 	}
 

@@ -19,7 +19,6 @@ package config
 import (
 	"errors"
 	"github.com/loopholelabs/s3"
-	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
@@ -32,11 +31,13 @@ var (
 )
 
 const (
-	DefaultSecure = true
-	DefaultRegion = "auto"
+	DefaultDisabled = false
+	DefaultSecure   = true
+	DefaultRegion   = "auto"
 )
 
 type Config struct {
+	Disabled  bool   `yaml:"disabled"`
 	Endpoint  string `yaml:"endpoint"`
 	Secure    bool   `yaml:"secure"`
 	Region    string `yaml:"region"`
@@ -47,36 +48,40 @@ type Config struct {
 
 func New() *Config {
 	return &Config{
-		Secure: DefaultSecure,
-		Region: DefaultRegion,
+		Disabled: DefaultDisabled,
+		Secure:   DefaultSecure,
+		Region:   DefaultRegion,
 	}
 }
 
 func (c *Config) Validate() error {
-	if c.Endpoint == "" {
-		return ErrEndpointRequired
-	}
+	if !c.Disabled {
+		if c.Endpoint == "" {
+			return ErrEndpointRequired
+		}
 
-	if c.Region == "" {
-		return ErrRegionRequired
-	}
+		if c.Region == "" {
+			return ErrRegionRequired
+		}
 
-	if c.Bucket == "" {
-		return ErrBucketRequired
-	}
+		if c.Bucket == "" {
+			return ErrBucketRequired
+		}
 
-	if c.AccessKey == "" {
-		return ErrAccessKeyRequired
-	}
+		if c.AccessKey == "" {
+			return ErrAccessKeyRequired
+		}
 
-	if c.SecretKey == "" {
-		return ErrSecretKeyRequired
+		if c.SecretKey == "" {
+			return ErrSecretKeyRequired
+		}
 	}
 
 	return nil
 }
 
 func (c *Config) RootPersistentFlags(flags *pflag.FlagSet) {
+	flags.BoolVar(&c.Disabled, "s3-disabled", DefaultDisabled, "Disable s3")
 	flags.StringVar(&c.Endpoint, "s3-endpoint", "", "The s3 endpoint")
 	flags.BoolVar(&c.Secure, "s3-secure", DefaultSecure, "The s3 secure flag")
 	flags.StringVar(&c.Region, "s3-region", DefaultRegion, "The s3 region")
@@ -85,33 +90,10 @@ func (c *Config) RootPersistentFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&c.SecretKey, "s3-secret-key", "", "The s3 secret key")
 }
 
-func (c *Config) GlobalRequiredFlags(cmd *cobra.Command) error {
-	err := cmd.MarkFlagRequired("s3-endpoint")
-	if err != nil {
-		return err
-	}
-
-	err = cmd.MarkFlagRequired("s3-bucket")
-	if err != nil {
-		return err
-	}
-
-	err = cmd.MarkFlagRequired("s3-access-key")
-	if err != nil {
-		return err
-	}
-
-	err = cmd.MarkFlagRequired("s3-secret-key")
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (c *Config) GenerateOptions(logName string) *s3.Options {
 	return &s3.Options{
 		LogName:   logName,
+		Disabled:  c.Disabled,
 		Secure:    c.Secure,
 		Region:    c.Region,
 		Endpoint:  c.Endpoint,
