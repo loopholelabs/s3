@@ -37,13 +37,13 @@ const (
 )
 
 type Config struct {
-	Disabled  bool   `yaml:"disabled"`
-	Endpoint  string `yaml:"endpoint"`
-	Secure    bool   `yaml:"secure"`
-	Region    string `yaml:"region"`
-	Bucket    string `yaml:"bucket"`
-	AccessKey string `yaml:"access_key"`
-	SecretKey string `yaml:"secret_key"`
+	Disabled  bool   `mapstructure:"disabled"`
+	Endpoint  string `mapstructure:"endpoint"`
+	Secure    bool   `mapstructure:"secure"`
+	Region    string `mapstructure:"region"`
+	Bucket    string `mapstructure:"bucket"`
+	AccessKey string `mapstructure:"access_key"`
+	SecretKey string `mapstructure:"secret_key"`
 }
 
 func New() *Config {
