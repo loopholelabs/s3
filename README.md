@@ -1,4 +1,4 @@
-# SR
+# S3
 
 An S3 helper library designed for use within Loophole Labs projects
 

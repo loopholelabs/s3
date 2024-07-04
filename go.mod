@@ -1,6 +1,6 @@
 module github.com/loopholelabs/s3
 
-go 1.18
+go 1.21
 
 require (
 	github.com/minio/minio-go/v7 v7.0.73
